@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Windows installer for StackForge via Docker Desktop.
+    Windows installer for staxen via Docker Desktop.
 #>
 param(
     [switch]$SkipStart
@@ -9,7 +9,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== Installing StackForge ===" -ForegroundColor Cyan
+Write-Host "=== Installing staxen ===" -ForegroundColor Cyan
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Error "Docker Desktop is required but not found. Install it from https://www.docker.com/products/docker-desktop/"
@@ -29,9 +29,11 @@ if (-not (Test-Path $envFile)) {
 $composeCmd = if (Get-Command "docker" -ErrorAction SilentlyContinue) { "docker compose" } else { "docker-compose" }
 
 if (-not $SkipStart) {
-    Write-Host "Building and starting StackForge on port 8080..." -ForegroundColor Green
+    Write-Host "Building and starting staxen core services..." -ForegroundColor Green
     Invoke-Expression "$composeCmd up --build -d"
-    Write-Host "StackForge installed. Access: http://localhost:8080" -ForegroundColor Green
+    Write-Host "staxen core services are up." -ForegroundColor Green
+    Write-Host "Landing page: http://localhost:8085" -ForegroundColor Green
+    Write-Host "Vault viewer: http://localhost:8083" -ForegroundColor Green
 } else {
     Write-Host "Skipped start. Run '$composeCmd up --build -d' when ready." -ForegroundColor Yellow
 }

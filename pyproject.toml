@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "stackforge"
+name = "staxen"
 version = "1.0.0"
 description = "CPU-only, privacy-focused Docker Compose stack for AI agents — local LLM, vector search, long-term memory, and synced notes, all self-hosted."
 readme = "README.md"
@@ -38,9 +38,9 @@ dev = ["pytest", "black", "flake8"]
 all = ["chromadb", "numpy", "pydantic", "pyyaml", "requests"]
 
 [project.urls]
-Homepage = "https://github.com/OneByJorah/StackForge"
-Repository = "https://github.com/OneByJorah/StackForge"
-Issues = "https://github.com/OneByJorah/StackForge/issues"
+Homepage = "https://github.com/OneByJorah/staxen"
+Repository = "https://github.com/OneByJorah/staxen"
+Issues = "https://github.com/OneByJorah/staxen/issues"
 
 [tool.setuptools.packages.find]
-include = ["stackforge*"]
+include = ["staxen*"]
