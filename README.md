@@ -4,7 +4,7 @@
 
 # StackForge
 
-**CPU-only, privacy-focused Docker Compose stack for AI agents — local LLM, vector search, long-term memory, and synced notes, all self-hosted**
+## CPU-only, privacy-focused Docker Compose stack for AI agents — local LLM, vector search, long-term memory, and synced notes, all self-hosted
 
 [![GitHub release](https://img.shields.io/github/v/release/OneByJorah/StackForge?color=93C5FD&label=release&logo=github)](https://github.com/OneByJorah/StackForge/releases)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -35,7 +35,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Open **http://localhost:8083** for the vault viewer.
+Open **<http://localhost:8083>** for the vault viewer.
 
 For an interactive first-run wizard that generates secrets and sets your IP, run `bash bootstrap.sh` instead.
 
@@ -113,7 +113,7 @@ python3 -m stackforge
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                   StackForge Stack                       │
 │  (14 services, CPU-only, Docker Compose)                │
@@ -133,28 +133,28 @@ python3 -m stackforge
 
 Copy `.env.example` to `.env` and configure:
 
-| Variable | Description |
+|Variable|Description|
 |----------|-------------|
-| `OLLAMA_MODEL` | Default Ollama model (default: `llama3.2`) |
-| `VAULT_PORT` | Vault viewer port (default: 8083) |
-| `SEARXNG_URL` | SearXNG instance URL |
-| `REDIS_URL` | Redis connection URL |
+|`OLLAMA_MODEL`|Default Ollama model (default: `llama3.2`)|
+|`VAULT_PORT`|Vault viewer port (default: 8083)|
+|`SEARXNG_URL`|SearXNG instance URL|
+|`REDIS_URL`|Redis connection URL|
 
 For interactive setup: run `bash bootstrap.sh` — generates secrets, sets IP, seeds vault.
 
 ## Services
 
-| Service | Purpose |
-|---------|---------|
-| `ollama` | Local LLM inference (CPU) |
-| `chromadb` | Vector database for memory |
-| `honcho` | Long-term memory store |
-| `searxng` | Private web search |
-| `vault` | Obsidian notes viewer (port 8083) |
-| `nginx` | Reverse proxy / gateway |
-| `playwright` | Browser automation |
-| `redis` | Cache and session store |
-| `+` 6 more supporting services | |
+|Service|Purpose|
+|---------|-------|
+|`ollama`|Local LLM inference (CPU)|
+|`chromadb`|Vector database for memory|
+|`honcho`|Long-term memory store|
+|`searxng`|Private web search|
+|`vault`|Obsidian notes viewer (port 8083)|
+|`nginx`|Reverse proxy / gateway|
+|`playwright`|Browser automation|
+|`redis`|Cache and session store|
+|`+` 6 more supporting services||
 
 ## Contributing
 

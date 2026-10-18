@@ -1,0 +1,9 @@
+title = "gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Example env files and documented placeholders"
+paths = ['''\.env\.example$''']
+regexes = ['''NOC_POLL_INTERVAL=10''']
