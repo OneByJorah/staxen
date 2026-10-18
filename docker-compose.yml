@@ -1,9 +1,8 @@
 # ─────────────────────────────────────────────────────────────
-# StackForge — Self-hosted AI Brain for Hermes Agent
-# One stack. One IP.  →  `docker compose up -d`
-# ─────────────────────────────────────────────────────────────
-# Requirements: git, docker, docker compose, <network-relay> (recommended)
-# See .env.example for all configurable variables.
+# staxen — Self-hosted AI agent stack (Ollama + Qdrant + Honcho + Obsidian)
+# Quick start:  docker compose up -d --build
+# Full stack:   docker compose --profile full up -d --build
+# See .env.example for configurable variables.
 # ─────────────────────────────────────────────────────────────
 
 x-logging: &default-log
@@ -13,11 +12,11 @@ x-logging: &default-log
 
 networks:
   tailnet:
-    name: stackdeploy-tailnet
+    name: staxen-tailnet
     driver: bridge
     attachable: true
   backend:
-    name: stackdeploy-backend
+    name: staxen-backend
     internal: true
     driver: bridge
 
@@ -31,15 +30,39 @@ volumes:
 services:
 
   # ═══════════════════════════════════════════════════════
-  # SEARCH ENGINE
+  # LANDING PAGE  —  static project overview
   # ═══════════════════════════════════════════════════════
-  searxng:
-    image: searxng/searxng:latest
-    container_name: stackdeploy-searxng
+  staxen:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/onebyjorah/staxen:latest
+    container_name: staxen-landing
     restart: unless-stopped
     networks: [tailnet]
     ports:
-      - "${SVC_SEARXNG_PORT:-8080}:8080"
+      - "127.0.0.1:${SVC_STAXEN_PORT:-8085}:80"
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID]
+    logging: *default-log
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ═══════════════════════════════════════════════════════
+  # SEARCH ENGINE  (optional — add --profile full)
+  # ═══════════════════════════════════════════════════════
+  searxng:
+    image: searxng/searxng:latest
+    container_name: staxen-searxng
+    restart: unless-stopped
+    profiles: [full]
+    networks: [tailnet]
+    ports:
+      - "127.0.0.1:${SVC_SEARXNG_PORT:-8080}:8080"
     volumes:
       - ./searxng:/etc/searxng:ro
     environment:
@@ -60,11 +83,11 @@ services:
   # ═══════════════════════════════════════════════════════
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: stackdeploy-qdrant
+    container_name: staxen-qdrant
     restart: unless-stopped
     networks: [tailnet]
     ports:
-      - "${SVC_QDRANT_PORT:-6333}:6333"
+      - "127.0.0.1:${SVC_QDRANT_PORT:-6333}:6333"
     volumes:
       - qdrant-data:/qdrant/storage
     logging: *default-log
@@ -76,16 +99,16 @@ services:
       start_period: 10s
 
   # ═══════════════════════════════════════════════════════
-  # MEMORY LAYER  —  Honcho (LLM memory) + Postgres + Redis
+  # MEMORY LAYER  —  Honcho + Postgres + Redis
   # ═══════════════════════════════════════════════════════
 
   honcho-db:
     image: pgvector/pgvector:pg15
-    container_name: stackdeploy-honcho-db
+    container_name: staxen-honcho-db
     restart: unless-stopped
     networks: [backend]
     ports:
-      - "127.0.0.1:5432:5432"    # host loopback only — admin tools
+      - "127.0.0.1:${SVC_HONCHO_DB_PORT:-5432}:5432"
     environment:
       - POSTGRES_DB=honcho
       - POSTGRES_USER=honcho
@@ -103,11 +126,11 @@ services:
 
   honcho-redis:
     image: redis:8.2
-    container_name: stackdeploy-honcho-redis
+    container_name: staxen-honcho-redis
     restart: unless-stopped
     networks: [backend]
     ports:
-      - "127.0.0.1:6379:6379"    # host loopback only
+      - "127.0.0.1:${SVC_HONCHO_REDIS_PORT:-6379}:6379"
     volumes:
       - honcho-redis-data:/data
     logging: *default-log
@@ -118,39 +141,53 @@ services:
       retries: 10
       start_period: 5s
 
-  honcho-api:
+  honcho-migrate:
     image: ghcr.io/plastic-labs/honcho:latest
-    container_name: stackdeploy-honcho-api
-    restart: unless-stopped
+    container_name: staxen-honcho-migrate
+    restart: "no"
+    networks: [backend]
     depends_on:
-      honcho-db:  { condition: service_healthy }
+      honcho-db: { condition: service_healthy }
       honcho-redis: { condition: service_healthy }
-    networks:
-      - backend
-      - tailnet
-    ports:
-      - "${SVC_HONCHO_PORT:-8000}:8000"
     environment:
       - DB_CONNECTION_URI=postgresql+psycopg://honcho:${HONCHO_DB_PASSWORD:-changeme}@honcho-db:5432/honcho
       - CACHE_ENABLED=true
       - CACHE_URL=redis://honcho-redis:6379/0
       - METRICS_ENABLED=false
-      # ── Embeddings: local Ollama (nomic-embed-text, 768-dim, OpenAI-compatible /v1) ──
+      - EMBEDDING_VECTOR_DIMENSIONS=1536
+    command: ["alembic", "upgrade", "head"]
+    logging: *default-log
+
+  honcho-api:
+    image: ghcr.io/plastic-labs/honcho:latest
+    container_name: staxen-honcho-api
+    restart: unless-stopped
+    depends_on:
+      honcho-db: { condition: service_healthy }
+      honcho-redis: { condition: service_healthy }
+      honcho-migrate: { condition: service_completed_successfully }
+    networks:
+      - backend
+      - tailnet
+    ports:
+      - "127.0.0.1:${SVC_HONCHO_PORT:-8000}:8000"
+    environment:
+      - DB_CONNECTION_URI=postgresql+psycopg://honcho:${HONCHO_DB_PASSWORD:-changeme}@honcho-db:5432/honcho
+      - CACHE_ENABLED=true
+      - CACHE_URL=redis://honcho-redis:6379/0
+      - METRICS_ENABLED=false
+      # Local Ollama embeddings (only used when the full profile is running)
       - EMBEDDING_MODEL_CONFIG__TRANSPORT=openai
       - EMBEDDING_MODEL_CONFIG__MODEL=nomic-embed-text
       - EMBEDDING_MODEL_CONFIG__OVERRIDES__BASE_URL=${OLLAMA_HOST:-http://localhost:11434}/v1
       - EMBEDDING_MODEL_CONFIG__OVERRIDES__API_KEY=ollama
-      - EMBEDDING_VECTOR_DIMENSIONS=768
-      # ── LLM: local Ollama via the openai transport (no external keys).
-      #    For OpenRouter instead: set LLM_OPENAI_BASE_URL=https://openrouter.ai/api/v1
-      #    + LLM_OPENAI_API_KEY=<key> and change the *_MODEL_CONFIG__MODEL values below. ──
+      - EMBEDDING_VECTOR_DIMENSIONS=1536
       - LLM_OPENAI_BASE_URL=${OLLAMA_HOST:-http://localhost:11434}/v1
       - LLM_OPENAI_API_KEY=ollama
       - OPENAI_API_KEY=ollama
       - LLM_VLLM_API_KEY=ollama
       - LLM_VLLM_BASE_URL=${OLLAMA_HOST:-http://localhost:11434}/v1
       - LLM_VLLM_MODEL=llama3.2:1b
-      # Local model for every LLM role (deriver / dialectic / summary / dream)
       - DERIVER_MODEL_CONFIG__TRANSPORT=openai
       - DERIVER_MODEL_CONFIG__MODEL=llama3.2:1b
       - SUMMARY_MODEL_CONFIG__TRANSPORT=openai
@@ -178,19 +215,18 @@ services:
       start_period: 30s
 
   # ═══════════════════════════════════════════════════════
-  # OBSIDIAN LIVESYNC  —  CouchDB (Real-time sync backend)
+  # OBSIDIAN LIVESYNC  —  CouchDB
   # ═══════════════════════════════════════════════════════
 
   livesync:
     image: couchdb:3.4
-    container_name: stackdeploy-livesync
+    container_name: staxen-livesync
     restart: unless-stopped
     networks: [tailnet]
     ports:
-      - "${SVC_COUCHDB_PORT:-5984}:5984"
+      - "127.0.0.1:${SVC_COUCHDB_PORT:-5984}:5984"
     volumes:
       - couchdb-data:/opt/couchdb/data
-    # Admin user created by CouchDB on first boot via env vars
     environment:
       - COUCHDB_USER=${COUCHDB_ADMIN_USER:-admin}
       - COUCHDB_PASSWORD=${COUCHDB_ADMIN_PASSWORD:-changeme}
@@ -204,7 +240,7 @@ services:
 
   livesync-init:
     image: curlimages/curl:latest
-    container_name: stackdeploy-livesync-init
+    container_name: staxen-livesync-init
     restart: "no"
     init: true
     networks: [tailnet]
@@ -224,11 +260,11 @@ services:
   # ═══════════════════════════════════════════════════════
   obsidian:
     image: caddy:2-alpine
-    container_name: stackdeploy-obsidian
+    container_name: staxen-obsidian
     restart: unless-stopped
     networks: [tailnet]
     ports:
-      - "${SVC_OBSIDIAN_PORT:-8083}:80"
+      - "127.0.0.1:${SVC_OBSIDIAN_PORT:-8083}:80"
     volumes:
       - ./obsidian/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./obsidian/vault:/var/lib/caddy/vault:ro
@@ -242,18 +278,19 @@ services:
       start_period: 5s
 
   # ═══════════════════════════════════════════════════════
-  # P2P FILE SYNC  —  Syncthing (laptop ↔ server)
+  # P2P FILE SYNC  (optional — add --profile full)
   # ═══════════════════════════════════════════════════════
   syncthing:
     image: syncthing/syncthing:latest
-    container_name: stackdeploy-syncthing
+    container_name: staxen-syncthing
     restart: unless-stopped
+    profiles: [full]
     networks: [tailnet]
     ports:
-      - "${SVC_SYNCTHING_UI_PORT:-8384}:8384"    # web UI
-      - "127.0.0.1:22000:22000/tcp"                         # sync transport
+      - "127.0.0.1:${SVC_SYNCTHING_UI_PORT:-8384}:8384"
+      - "127.0.0.1:22000:22000/tcp"
       - "127.0.0.1:22000:22000/udp"
-      - "127.0.0.1:21027:21027/udp"                         # LAN discovery
+      - "127.0.0.1:21027:21027/udp"
     volumes:
       - ./syncthing/config:/var/syncthing/config
       - ./obsidian/vault:/var/syncthing/vault:rw
@@ -269,15 +306,16 @@ services:
       start_period: 15s
 
   # ═══════════════════════════════════════════════════════
-  # WEB AUTOMATION  —  Selenium standalone Chrome
+  # WEB AUTOMATION  (optional — add --profile full)
   # ═══════════════════════════════════════════════════════
   webautomation:
     image: selenium/standalone-chrome:latest
-    container_name: stackdeploy-webautomation
+    container_name: staxen-webautomation
     restart: unless-stopped
+    profiles: [full]
     networks: [tailnet]
     ports:
-      - "${SVC_SELENIUM_PORT:-4444}:4444"
+      - "127.0.0.1:${SVC_SELENIUM_PORT:-4444}:4444"
     shm_size: "${SELENIUM_SHM_SIZE:-2g}"
     environment:
       - SE_NO_SANDBOX=${SELENIUM_NO_SANDBOX:-1}
@@ -292,12 +330,13 @@ services:
       start_period: 20s
 
   # ═══════════════════════════════════════════════════════
-  # LOCAL LLM  —  Ollama (optional, comment out to skip)
+  # LOCAL LLM  (optional — add --profile full)
   # ═══════════════════════════════════════════════════════
   ollama:
     image: ollama/ollama:latest
-    container_name: stackdeploy-ollama
+    container_name: staxen-ollama
     restart: unless-stopped
+    profiles: [full]
     networks: [tailnet]
     ports:
       - "127.0.0.1:11434:11434"
@@ -308,14 +347,6 @@ services:
       - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-5m}
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-1}
       - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
-    # GPU acceleration — uncomment if NVIDIA GPU + nvidia-container-toolkit installed:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
     logging: *default-log
     healthcheck:
       test: ["CMD-SHELL", "timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/11434'"]

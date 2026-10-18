@@ -1,4 +1,4 @@
-name: StackForge CI/CD
+name: staxen CI/CD
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build all services
+      - name: Build core services
         run: docker compose build
 
       - name: Validate compose config
@@ -53,13 +53,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start stack
+      - name: Start core stack
         run: |
           cp .env.example .env
-          # Set test passwords
-          echo "HONCHO_DB_PASSWORD=test123" >> .env
-          echo "CAMOFOX_API_KEY=test" >> .env
-          echo "CAMOFOX_ADMIN_KEY=test" >> .env
           docker compose up -d
 
       - name: Wait for services
@@ -90,9 +86,9 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
           script: |
-            cd /path/to/StackForge
+            cd /path/to/staxen
             git pull origin main
             [ -f .env ] || cp .env.example .env
-            docker compose pull
-            docker compose up -d
-            ./scripts/healthcheck.sh localhost
+            docker compose --profile full pull
+            docker compose --profile full up -d
+            STACK_PROFILE=full ./scripts/healthcheck.sh localhost
