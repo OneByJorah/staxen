@@ -1,6 +1,7 @@
-// Captures real screenshots of the running demo stack with Playwright.
-// Usage (stack already running):  BASE_URL=http://127.0.0.1:8080 node scripts/screenshots.mjs
-// Requires: npm install --no-save playwright && npx playwright install chromium
+// Captures real screenshots of the running staxen core stack with Playwright.
+// Usage (stack already running):
+//   npm install --no-save playwright && npx playwright install chromium
+//   node scripts/screenshots.mjs
 //
 // Safety: every page is scanned for private IPs, tailnet IPs, emails, and forbidden words
 // BEFORE a screenshot is written. If anything matches, the script exits 1 and saves nothing.
@@ -11,13 +12,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-const BASE = process.env.BASE_URL || "http://127.0.0.1:8080";
 const OUT = process.env.OUT_DIR || "docs/screenshots";
 const RECORD = process.env.RECORD === "1";
 
-// Edit this list per project: one entry per screen worth showing.
+// Pages are captured from the locally-running core profile.
+// Each entry is either { name, url } for a full URL or { name, path, waitFor }
+// relative to the BASE_URL below.
+const BASE = process.env.BASE_URL || "http://127.0.0.1:8085";
 const PAGES = [
-  { name: "dashboard", path: "/", waitFor: "#app-ready" },
+  { name: "landing", path: "/", waitFor: "body" },
+  { name: "vault", url: "http://127.0.0.1:8083", waitFor: "body" },
+  { name: "qdrant", url: "http://127.0.0.1:6333/dashboard", waitFor: "body" },
+  { name: "fauxton", url: "http://127.0.0.1:5984/_utils", waitFor: "body" },
 ];
 
 const FORBIDDEN = [
@@ -36,8 +42,6 @@ fs.mkdirSync(OUT, { recursive: true });
 const videoDir = path.join("tmp", "videos");
 if (RECORD) fs.mkdirSync(videoDir, { recursive: true });
 
-// CHROMIUM_PATH: use an existing Chrome/Chromium instead of Playwright's download (handy on a prepared runner).
-// NO_SANDBOX=1: needed when running as root inside some containers.
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
   args: process.env.NO_SANDBOX === "1" ? ["--no-sandbox"] : [],
@@ -52,7 +56,8 @@ const context = await browser.newContext({
 let failed = false;
 for (const p of PAGES) {
   const page = await context.newPage();
-  await page.goto(new URL(p.path, BASE).toString(), { waitUntil: "networkidle" });
+  const target = p.url ? p.url : new URL(p.path, BASE).toString();
+  await page.goto(target, { waitUntil: "networkidle" });
   if (p.waitFor) await page.waitForSelector(p.waitFor, { timeout: 15000 });
 
   const text = (await page.evaluate(() => document.body.innerText)) + "\n" + (await page.title());

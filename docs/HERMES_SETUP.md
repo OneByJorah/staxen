@@ -4,8 +4,8 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/OneByJorah/StackForge.git
-cd StackForge
+git clone https://github.com/OneByJorah/staxen.git
+cd staxen
 
 # 2. Environment
 cp .env.example .env

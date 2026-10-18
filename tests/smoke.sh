@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /path/to/StackForge
+cd /path/to/staxen
 
 echo '=== Core services ==='
 curl -s -o /dev/null -w 'searxng=%{http_code}\n' 'http://localhost:8080/search?format=json&q=test'

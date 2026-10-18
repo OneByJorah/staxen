@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== StackForge Bootstrap ==="
+echo "=== staxen Bootstrap ==="
 echo ""
 
 # Check Docker
@@ -43,7 +43,7 @@ echo "🏥 Running health check..."
 ./scripts/healthcheck.sh localhost
 
 echo ""
-echo "✅ StackForge is ready!"
+echo "✅ staxen is ready!"
 echo ""
 echo "Access points:"
 echo "  SearXNG:            http://localhost:8080"

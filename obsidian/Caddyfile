@@ -1,4 +1,4 @@
-# StackForge Obsidian Vault Web Viewer
+# staxen Obsidian Vault Web Viewer
 # Serves index.html at / and markdown vault at /vault/
 
 :80 {

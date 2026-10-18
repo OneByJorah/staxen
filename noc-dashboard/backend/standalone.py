@@ -265,7 +265,7 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 
-app = FastAPI(title="NOC StackForge Dashboard", lifespan=lifespan)
+app = FastAPI(title="NOC staxen Dashboard", lifespan=lifespan)
 
 
 @app.get("/api/status")
@@ -599,7 +599,7 @@ SERVICE_REGISTRY = {
     },
     "noc_dashboard": {
         "name": "NOC Dashboard",
-        "description": "StackForge health monitor showing service uptime, Tailscale map, and DERP relays.",
+        "description": "staxen health monitor showing service uptime, Tailscale map, and DERP relays.",
         "tailscale_url": f"http://{TAILSCALE_IP}:9500",
         "internal_url": "http://localhost:9500",
         "api_docs": "http://localhost:9500/api/status",
@@ -792,7 +792,7 @@ async def api_agents_onboard(request: Request):
         except Exception:
             key = None
     setup_bash = (
-        f"# StackForge agent onboarding — run to self-configure (nothing manual)\\n"
+        f"# staxen agent onboarding — run to self-configure (nothing manual)\\n"
         f"hermes config set model.base_url http://{ip}:11434\n"
         f"hermes config set model.provider custom:ollama\n"
         f"hermes config set memory.provider custom\n"
