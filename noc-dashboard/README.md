@@ -14,21 +14,25 @@ port/API exactly as before — this just gives you one screen to see all of them
 2. Copy `docker-compose.dashboard.yml` to the repo root too (next to
    `docker-compose.yml` / `docker-compose.headroom.yml`).
 3. (Optional) add to `.env`:
-   ```
+
+   ```ini
    PORTAINER_URL=http://<portainer-host>:9000
    PORTAINER_API_KEY=<your Portainer API key>
    NOC_POLL_INTERVAL=10
    ENABLE_HEADROOM_MONITORING=false
    ```
+
 4. Deploy:
-   ```
+
+   ```bash
    docker compose -f docker-compose.yml -f docker-compose.dashboard.yml up -d --build
    ```
+
 5. Open `http://<your-tailscale-ip>:9500`
 
 ## Running everything together
 
-```
+```bash
 docker compose \
   -f docker-compose.yml \
   -f docker-compose.dashboard.yml \
