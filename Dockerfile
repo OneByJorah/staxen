@@ -1,4 +1,4 @@
-FROM nginx:1.27-alpine-slim
+FROM nginx:1.29-alpine-slim
 
 # Copy only the static landing-page assets
 COPY index.html /usr/share/nginx/html/index.html
